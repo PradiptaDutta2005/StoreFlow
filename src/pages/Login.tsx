@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -16,10 +15,11 @@ const Login = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { login } = useAuth();
-  
+
   const defaultPortal = searchParams.get('portal') || 'customer';
   const [selectedPortal, setSelectedPortal] = useState(defaultPortal);
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [employeeId, setEmployeeId] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -38,25 +38,20 @@ const Login = () => {
     }
 
     setIsLoading(true);
-    
     try {
-      // Verify customer credentials
       const customer = await api.getCustomer(phoneNumber);
-      
-      // In a real app, password would be hashed and compared securely
       if (customer.password !== password) {
         toast.error('Invalid credentials');
-        setIsLoading(false);
         return;
       }
 
       login({
         id: phoneNumber,
         role: 'customer',
-        phoneNumber: phoneNumber,
+        phoneNumber,
         name: customer.name
       });
-      
+
       toast.success(`Welcome, ${customer.name}!`);
       navigate('/customer');
     } catch (error) {
@@ -68,44 +63,59 @@ const Login = () => {
   };
 
   const handleStaffLogin = async () => {
-    if (!email || !password) {
-      toast.error('Please enter both email and password');
+    if (!password) {
+      toast.error('Please enter password');
       return;
     }
 
-    // Demo credentials
-    const demoCredentials = {
-      storekeeper: { email: 'keeper@store.com', password: 'password', name: 'Demo Storekeeper' },
-      employee: { email: 'emp@store.com', password: 'password', name: 'Demo Employee', employeeId: 'EMP001' },
-      admin: { email: 'admin@store.com', password: 'password', name: 'Demo Admin' }
-    };
+    if (selectedPortal === 'employee') {
+      if (!employeeId) {
+        toast.error('Please enter employee ID');
+        return;
+      }
 
-    const credentials = demoCredentials[selectedPortal as keyof typeof demoCredentials];
-    
-    if (!credentials || email !== credentials.email || password !== credentials.password) {
-      toast.error('Invalid credentials. Check demo credentials below.');
-      return;
+      setIsLoading(true);
+      try {
+        const emp = await api.employeeLogin(employeeId, password);
+        login({
+          id: emp.employeeId,
+          role: 'employee',
+          name: emp.name,
+          employeeId: emp.employeeId
+        });
+        toast.success(`Welcome, ${emp.name}!`);
+        navigate('/employee');
+      } catch (err: any) {
+        toast.error(err.message || 'Invalid credentials');
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // Demo login for admin/storekeeper
+      const demoCredentials = {
+        storekeeper: { email: 'keeper@store.com', password: 'password', name: 'Demo Storekeeper' },
+        admin: { email: 'admin@store.com', password: 'password', name: 'Demo Admin' }
+      };
+
+      const creds = demoCredentials[selectedPortal as keyof typeof demoCredentials];
+
+      if (!creds || email !== creds.email || password !== creds.password) {
+        toast.error('Invalid credentials. Check demo credentials below.');
+        return;
+      }
+
+      setIsLoading(true);
+      setTimeout(() => {
+        login({
+          id: email,
+          role: selectedPortal as 'customer' | 'storekeeper' | 'employee' | 'admin',
+          name: creds.name
+        });
+        toast.success('Login successful!');
+        navigate(`/${selectedPortal}`);
+        setIsLoading(false);
+      }, 1000);
     }
-
-    setIsLoading(true);
-
-    setTimeout(() => {
-  const loginPayload: any = {
-    id: email,
-    role: selectedPortal,
-    name: credentials.name
-  };
-
-  if (selectedPortal === 'employee' && 'employeeId' in credentials) {
-    loginPayload.employeeId = credentials.employeeId;
-  }
-
-  login(loginPayload);
-  toast.success('Login successful!');
-  navigate(`/${selectedPortal}`);
-  setIsLoading(false);
-}, 1000);
-
   };
 
   const isCustomerPortal = selectedPortal === 'customer';
@@ -114,9 +124,8 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Header */}
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center text-store-blue hover:text-store-blue-dark mb-4 transition-colors">
+          <Link to="/" className="inline-flex items-center text-store-blue hover:text-store-blue-dark mb-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home
           </Link>
@@ -144,7 +153,6 @@ const Login = () => {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Portal Selection */}
             <div className="space-y-2">
               <Label htmlFor="portal">Select Portal</Label>
               <Select value={selectedPortal} onValueChange={setSelectedPortal}>
@@ -161,7 +169,7 @@ const Login = () => {
               </Select>
             </div>
 
-            {/* Customer Login Form */}
+            {/* Customer Login */}
             {isCustomerPortal ? (
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -193,7 +201,6 @@ const Login = () => {
                 >
                   {isLoading ? 'Logging in...' : 'Login'}
                 </Button>
-                
                 <div className="text-center">
                   <p className="text-sm text-gray-600">
                     Don't have an account?{' '}
@@ -204,19 +211,31 @@ const Login = () => {
                 </div>
               </div>
             ) : (
-              /* Staff Login Form */
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="store-input"
-                  />
-                </div>
+                {selectedPortal === 'employee' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="employeeId">Employee ID</Label>
+                    <Input
+                      id="employeeId"
+                      placeholder="Enter your employee ID"
+                      value={employeeId}
+                      onChange={(e) => setEmployeeId(e.target.value)}
+                      className="store-input"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="store-input"
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
                   <Input
@@ -235,8 +254,7 @@ const Login = () => {
                 >
                   {isLoading ? 'Logging in...' : 'Login'}
                 </Button>
-                
-                {/* Demo Credentials */}
+
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                   <p className="text-sm font-medium text-store-blue mb-2">Demo Credentials:</p>
                   <div className="text-xs space-y-1 text-gray-600">
@@ -248,8 +266,8 @@ const Login = () => {
                     )}
                     {selectedPortal === 'employee' && (
                       <>
-                        <p>Email: emp@store.com</p>
-                        <p>Password: password</p>
+                        <p>Employee ID: EMP001</p>
+                        <p>Password: password123</p>
                       </>
                     )}
                     {selectedPortal === 'admin' && (

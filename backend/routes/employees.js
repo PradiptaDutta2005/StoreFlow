@@ -69,5 +69,34 @@ router.delete('/:employeeId', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+// routes/employees.js
+// routes/employees.js
+router.post('/login', async (req, res) => {
+  const { employeeId, password } = req.body;
+
+  try {
+    const employee = await Employee.findOne({ employeeId });
+
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    // 🛑 If you're NOT using bcrypt:
+    if (employee.password !== password) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // ✅ Success
+    res.json({
+      employeeId: employee.employeeId,
+      name: employee.name,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
 
 module.exports = router;

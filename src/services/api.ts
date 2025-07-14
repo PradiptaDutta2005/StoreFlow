@@ -150,6 +150,19 @@ export const api = {
     if (!response.ok) throw new Error('Failed to update employee');
     return response.json();
   },
+  async employeeLogin(employeeId: string, password: string) {
+  const response = await fetch(`${API_BASE}/employees/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ employeeId, password }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Login failed');
+  }
+  return response.json(); // returns employee object
+},
 
   // Alert endpoints
   async getAlerts(params?: { employeeId?: string }) {

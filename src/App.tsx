@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
-
+import EmployeeLogin from "@/pages/employee/EmployeeLogin";
 // Pages
 import Landing from "./pages/Landing";
 import CustomerPortal from "./pages/customer/CustomerPortal";

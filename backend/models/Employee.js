@@ -29,7 +29,8 @@ const employeeSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Hash password before saving
+// 🔒 Optional: Enable later for password hashing
+/*
 employeeSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   try {
@@ -41,9 +42,9 @@ employeeSchema.pre('save', async function (next) {
   }
 });
 
-// Method to compare password during login
 employeeSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
+*/
 
 module.exports = mongoose.model('Employee', employeeSchema);
