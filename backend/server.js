@@ -10,7 +10,7 @@ app.use('/employees', employeeRoutes);
 
 // ✅ CORS configuration
 app.use(cors({
-  origin: ['http://localhost:8081', 'http://localhost:5173'], // include frontend ports
+  origin: ['http://localhost:8081', 'http://localhost:5173','https://store-flow-frontend.vercel.app'], // include frontend ports
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
